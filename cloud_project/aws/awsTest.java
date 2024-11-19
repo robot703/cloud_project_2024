@@ -79,7 +79,7 @@ public class awsTest {
 			System.out.println("                                 99. quit                   ");
 			System.out.println("------------------------------------------------------------");
 			
-			System.out.print("Enter an integer: ");
+			System.out.print("Enter an integer:  ");
 			
 			if(menu.hasNextInt()){
 				number = menu.nextInt();
