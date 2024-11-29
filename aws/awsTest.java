@@ -65,7 +65,7 @@ public class awsTest {
 					listInstances();
 					break;
 				case 2:
-					showAvailabilityZones();
+					availableZones();
 					break;
 				case 3:
 					System.out.print("Enter Instance ID to start: ");
@@ -73,7 +73,7 @@ public class awsTest {
 					startInstance(instanceId);
 					break;
 				case 4:
-					showRegions();
+					availableRegions();
 					break;
 				case 5:
 					System.out.print("Enter Instance ID to stop: ");
@@ -103,120 +103,181 @@ public class awsTest {
 			}
 		}
 	}
-
 	public static void listInstances() {
-		System.out.println("Listing EC2 Instances...");
+
+		System.out.println("Listing instances....");
 		boolean done = false;
+
 		DescribeInstancesRequest request = new DescribeInstancesRequest();
 
-		while (!done) {
+		while(!done) {
 			DescribeInstancesResult response = ec2.describeInstances(request);
 
-			for (Reservation reservation : response.getReservations()) {
-				for (Instance instance : reservation.getInstances()) {
-					System.out.printf("[ID] %s, [AMI] %s, [Type] %s, [State] %s, [Monitoring] %s\n",
+			for(Reservation reservation : response.getReservations()) {
+				for(Instance instance : reservation.getInstances()) {
+					System.out.printf(
+							"[id] %s, " +
+									"[AMI] %s, " +
+									"[type] %s, " +
+									"[state] %10s, " +
+									"[monitoring state] %s",
 							instance.getInstanceId(),
 							instance.getImageId(),
 							instance.getInstanceType(),
 							instance.getState().getName(),
 							instance.getMonitoring().getState());
 				}
+				System.out.println();
 			}
 
 			request.setNextToken(response.getNextToken());
-			if (response.getNextToken() == null) {
+
+			if(response.getNextToken() == null) {
 				done = true;
 			}
 		}
 	}
 
-	public static void showAvailabilityZones() {
-		System.out.println("Showing Available Zones...");
+	public static void availableZones()	{
+
+		System.out.println("Available zones....");
 		try {
-			DescribeAvailabilityZonesResult zonesResult = ec2.describeAvailabilityZones();
-			for (AvailabilityZone zone : zonesResult.getAvailabilityZones()) {
-				System.out.printf("[ID] %s, [Region] %s, [Zone] %s\n",
-						zone.getZoneId(),
-						zone.getRegionName(),
-						zone.getZoneName());
+			DescribeAvailabilityZonesResult availabilityZonesResult = ec2.describeAvailabilityZones();
+			Iterator <AvailabilityZone> iterator = availabilityZonesResult.getAvailabilityZones().iterator();
+
+			AvailabilityZone zone;
+			while(iterator.hasNext()) {
+				zone = iterator.next();
+				System.out.printf("[id] %s,  [region] %15s, [zone] %15s\n", zone.getZoneId(), zone.getRegionName(), zone.getZoneName());
 			}
-		} catch (AmazonServiceException e) {
-			System.err.println("Error: " + e.getMessage());
+			System.out.println("You have access to " + availabilityZonesResult.getAvailabilityZones().size() +
+					" Availability Zones.");
+
+		} catch (AmazonServiceException ase) {
+			System.out.println("Caught Exception: " + ase.getMessage());
+			System.out.println("Reponse Status Code: " + ase.getStatusCode());
+			System.out.println("Error Code: " + ase.getErrorCode());
+			System.out.println("Request ID: " + ase.getRequestId());
 		}
+
 	}
 
-	public static void startInstance(String instanceId) {
-		try {
-			StartInstancesRequest request = new StartInstancesRequest().withInstanceIds(instanceId);
-			ec2.startInstances(request);
-			System.out.printf("Successfully started instance: %s\n", instanceId);
-		} catch (Exception e) {
-			System.err.println("Error starting instance: " + e.getMessage());
-		}
+	public static void startInstance(String instance_id)
+	{
+
+		System.out.printf("Starting .... %s\n", instance_id);
+
+		DryRunSupportedRequest<StartInstancesRequest> dry_request =
+				() -> {
+					StartInstancesRequest request = new StartInstancesRequest()
+							.withInstanceIds(instance_id);
+
+					return request.getDryRunRequest();
+				};
+
+		StartInstancesRequest request = new StartInstancesRequest()
+				.withInstanceIds(instance_id);
+
+		ec2.startInstances(request);
+
+		System.out.printf("Successfully started instance %s", instance_id);
 	}
 
-	public static void showRegions() {
-		System.out.println("Available Regions:");
-		DescribeRegionsResult regionsResponse = ec2.describeRegions();
 
-		for (Region region : regionsResponse.getRegions()) {
-			System.out.printf("[Region] %s, [Endpoint] %s\n",
+	public static void availableRegions() {
+
+		System.out.println("Available regions ....");
+
+		DescribeRegionsResult regions_response = ec2.describeRegions();
+
+		for(Region region : regions_response.getRegions()) {
+			System.out.printf(
+					"[region] %15s, " +
+							"[endpoint] %s\n",
 					region.getRegionName(),
 					region.getEndpoint());
 		}
 	}
 
-	public static void stopInstance(String instanceId) {
+	public static void stopInstance(String instance_id) {
+
+		DryRunSupportedRequest<StopInstancesRequest> dry_request =
+				() -> {
+					StopInstancesRequest request = new StopInstancesRequest()
+							.withInstanceIds(instance_id);
+
+					return request.getDryRunRequest();
+				};
+
 		try {
-			StopInstancesRequest request = new StopInstancesRequest().withInstanceIds(instanceId);
+			StopInstancesRequest request = new StopInstancesRequest()
+					.withInstanceIds(instance_id);
+
 			ec2.stopInstances(request);
-			System.out.printf("Successfully stopped instance: %s\n", instanceId);
-		} catch (Exception e) {
-			System.err.println("Error stopping instance: " + e.getMessage());
+			System.out.printf("Successfully stop instance %s\n", instance_id);
+
+		} catch(Exception e)
+		{
+			System.out.println("Exception: "+e.toString());
 		}
+
 	}
 
-	public static void createInstance(String amiId) {
-		try {
-			RunInstancesRequest runRequest = new RunInstancesRequest()
-					.withImageId(amiId)
-					.withInstanceType(InstanceType.T2Micro)
-					.withMaxCount(1)
-					.withMinCount(1);
+	public static void createInstance(String ami_id) {
+		RunInstancesRequest run_request = new RunInstancesRequest()
+				.withImageId(ami_id)
+				.withInstanceType(InstanceType.T2Micro)
+				.withMaxCount(1)
+				.withMinCount(1);
 
-			RunInstancesResult runResponse = ec2.runInstances(runRequest);
-			String instanceId = runResponse.getReservation().getInstances().get(0).getInstanceId();
+		RunInstancesResult run_response = ec2.runInstances(run_request);
 
-			System.out.printf("Successfully created instance: %s (AMI: %s)\n", instanceId, amiId);
-		} catch (Exception e) {
-			System.err.println("Error creating instance: " + e.getMessage());
-		}
+		String reservation_id = run_response.getReservation().getInstances().get(0).getInstanceId();
+
+		System.out.printf(
+				"Successfully started EC2 instance %s based on AMI %s",
+				reservation_id, ami_id);
+
 	}
 
-	public static void rebootInstance(String instanceId) {
+	public static void rebootInstance(String instance_id) {
+
+		System.out.printf("Rebooting .... %s\n", instance_id);
+
 		try {
-			RebootInstancesRequest request = new RebootInstancesRequest().withInstanceIds(instanceId);
-			ec2.rebootInstances(request);
-			System.out.printf("Successfully rebooted instance: %s\n", instanceId);
-		} catch (Exception e) {
-			System.err.println("Error rebooting instance: " + e.getMessage());
+			RebootInstancesRequest request = new RebootInstancesRequest()
+					.withInstanceIds(instance_id);
+
+			RebootInstancesResult response = ec2.rebootInstances(request);
+
+			System.out.printf(
+					"Successfully rebooted instance %s", instance_id);
+
+		} catch(Exception e)
+		{
+			System.out.println("Exception: "+e.toString());
 		}
+
+
 	}
 
 	public static void listImages() {
-		System.out.println("Listing available images...");
-		try {
-			DescribeImagesRequest request = new DescribeImagesRequest();
-			DescribeImagesResult result = ec2.describeImages(request);
+		System.out.println("Listing images....");
 
-			for (Image image : result.getImages()) {
-				System.out.printf("[ImageID] %s, [Name] %s, [Owner] %s\n",
-						image.getImageId(),
-						image.getName(),
-						image.getOwnerId());
-			}
-		} catch (Exception e) {
-			System.err.println("Error listing images: " + e.getMessage());
+		DescribeImagesRequest request = new DescribeImagesRequest();
+		ProfileCredentialsProvider credentialsProvider = new ProfileCredentialsProvider();
+
+		request.getFilters().add(new Filter().withName("name").withValues("htcondor-slave-image"));
+		request.setRequestCredentialsProvider(credentialsProvider);
+
+		DescribeImagesResult results = ec2.describeImages(request);
+
+		for(Image images :results.getImages()){
+			System.out.printf("[ImageID] %s, [Name] %s, [Owner] %s\n",
+					images.getImageId(), images.getName(), images.getOwnerId());
 		}
+
 	}
 }
+
+
