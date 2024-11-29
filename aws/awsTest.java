@@ -263,9 +263,9 @@ public class awsTest {
 
 	public static void listImages() {
 		System.out.println("Listing images....");
-
+		String credentialsFilePath = "C:/Users/robot/.aws/credentials.txt";
 		DescribeImagesRequest request = new DescribeImagesRequest();
-		ProfileCredentialsProvider credentialsProvider = new ProfileCredentialsProvider();
+		ProfileCredentialsProvider credentialsProvider = new ProfileCredentialsProvider(credentialsFilePath, "default");
 
 		request.getFilters().add(new Filter().withName("name").withValues("htcondor-slave-image"));
 		request.setRequestCredentialsProvider(credentialsProvider);
