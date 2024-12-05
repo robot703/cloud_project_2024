@@ -23,7 +23,9 @@ public class awsTest {
 		} catch (Exception e) {
 			throw new AmazonClientException(
 					"Cannot load the credentials from the specified credentials file. " +
-							"Ensure the credentials file is at " + credentialsFilePath + " and properly formatted.", e);
+							"Ensure the credentials file is at " +
+							credentialsFilePath +
+							" and properly formatted.", e);
 		}
 
 		ec2 = AmazonEC2ClientBuilder.standard()
@@ -267,7 +269,7 @@ public class awsTest {
 		DescribeImagesRequest request = new DescribeImagesRequest();
 		ProfileCredentialsProvider credentialsProvider = new ProfileCredentialsProvider(credentialsFilePath, "default");
 
-		request.getFilters().add(new Filter().withName("name").withValues("htcondor-slave-image"));
+		request.getFilters().add(new Filter().withName("owner-id").withValues("557690623174"));
 		request.setRequestCredentialsProvider(credentialsProvider);
 
 		DescribeImagesResult results = ec2.describeImages(request);
