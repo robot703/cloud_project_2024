@@ -12,6 +12,7 @@
 	import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 	import com.amazonaws.services.appstream.model.Session;
 	import com.amazonaws.services.ec2.AmazonEC2;
+	import com.amazonaws.services.ec2.AmazonEC2Client;
 	import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 	import com.amazonaws.services.ec2.model.*;
 	import com.jcraft.jsch.ChannelExec;
@@ -46,102 +47,116 @@
 					.build();
 		}
 
-	public static void main(String[] args) throws Exception {
-		init();
+		public static void main(String[] args) throws Exception {
+			init();
 
-		Scanner menu = new Scanner(System.in);
-		Scanner idScanner = new Scanner(System.in);
-		int option;
+			Scanner menu = new Scanner(System.in);
+			Scanner idScanner = new Scanner(System.in);
+			int option;
 
-		while (true) {
-			System.out.println("\n-----------------------------------------------");
-			System.out.println("Amazon AWS EC2 Management Console (SDK)");
-			System.out.println("-----------------------------------------------");
-			System.out.println("1. List Instances        2. Show Availability Zones");
-			System.out.println("3. Start Instance        4. Show Regions");
-			System.out.println("5. Stop Instance         6. Create Instance");
-			System.out.println("7. Reboot Instance       8. List Images");
-			System.out.println("9. Condor_status         10. Describe Instance");
-			System.out.println("11. Check Instance Memory  12. List Volumes");
-			System.out.println("13. Network Security Menu 99. Quit");
-			System.out.println("13. Network Security Menu 99. Quit");
-			System.out.println("-----------------------------------------------");
-			System.out.print("Select an option: ");
+			while (true) {
+				System.out.println("\n-----------------------------------------------");
+				System.out.println("Amazon AWS EC2 Management Console (SDK)");
+				System.out.println("-----------------------------------------------");
+				System.out.println("1. List Instances        2. Show Availability Zones");
+				System.out.println("3. Start Instance        4. Show Regions");
+				System.out.println("5. Stop Instance         6. Create Instance");
+				System.out.println("7. Reboot Instance       8. Delete Instance");
+				System.out.println("9. Describe Instance     10. Instance Memory");
+				System.out.println("11. List Volumes         12. List Images");
+				System.out.println("13. Network SecurityMenu 14. Condor_status");
+				System.out.println(" ");
+				System.out.println("99. Quit");
+				System.out.println("-----------------------------------------------");
+				System.out.print("Select an option: ");
 
-			if (menu.hasNextInt()) {
-				option = menu.nextInt();
-			} else {
-				System.out.println("Invalid input! Please enter a number.");
-				menu.next(); // Clear invalid input
-				continue;
-			}
+				if (menu.hasNextInt()) {
+					option = menu.nextInt();
+				} else {
+					System.out.println("Invalid input! Please enter a number.");
+					menu.next(); // Clear invalid input
+					continue;
+				}
 
-			String instanceId;
-			switch (option) {
-				case 1:
-					listInstances();
-					break;
-				case 2:
-					availableZones();
-					break;
-				case 3:
-					System.out.print("Enter Instance ID to start: ");
-					instanceId = idScanner.nextLine();
-					startInstance(instanceId);
-					break;
-				case 4:
-					availableRegions();
-					break;
-				case 5:
-					System.out.print("Enter Instance ID to stop: ");
-					instanceId = idScanner.nextLine();
-					stopInstance(instanceId);
-					break;
-				case 6:
-					System.out.print("Enter AMI ID to create instance: ");
-					String amiId = idScanner.nextLine();
-					createInstance(amiId);
-					break;
-				case 7:
-					System.out.print("Enter Instance ID to reboot: ");
-					instanceId = idScanner.nextLine();
-					rebootInstance(instanceId);
-					break;
-				case 8:
-					listImages();
-					break;
-				case 9:
-					Condor_status();
-					break;
-				case 10:
-					System.out.print("Enter Instance ID to fetch details: ");
-					instanceId = idScanner.nextLine();
-					describeInstance(instanceId);
-					break;
-				case 11:
-					System.out.print("Enter Instance ID to check memory: ");
-					instanceId = idScanner.nextLine();
-					checkInstanceMemory(instanceId);
-					break;
-				case 12:
-					listAllVolumes();
-					break;
+				String instanceId;
+				switch (option) {
+					case 1:
+						listInstances();
+						break;
+					case 2:
+						availableZones();
+						break;
+					case 3:
+						System.out.print("Enter Instance ID to start: ");
+						instanceId = idScanner.nextLine();
+						startInstance(instanceId);
+						break;
+					case 4:
+						availableRegions();
+						break;
+					case 5:
+						System.out.print("Enter Instance ID to stop: ");
+						instanceId = idScanner.nextLine();
+						stopInstance(instanceId);
+						break;
+					case 6:
+						System.out.print("Enter AMI ID to create instance: ");
+						String amiId = idScanner.nextLine();
+						createInstance(amiId);
+						break;
+					case 7:
+						System.out.print("Enter Instance ID to reboot: ");
+						instanceId = idScanner.nextLine();
+						rebootInstance(instanceId);
+						break;
+					case 8:
+						System.out.print("Enter Instance ID to delete instance: ");
+						instanceId = idScanner.nextLine();
 
-				case 13:
-					showNetworkSecurityMenu();
-					break;
-				case 99:
-					System.out.println("Exiting... Goodbye!");
-					menu.close();
-					idScanner.close();
-					return;
-				default:
-					System.out.println("Invalid option! Please select a valid menu option.");
+						System.out.print("정말 이 인스턴스를 삭제하시겠습니까? (Yes/No): ");
+						String confirmation = idScanner.nextLine();
+
+						if ("Yes".equalsIgnoreCase(confirmation) || "yes".equalsIgnoreCase(confirmation) || "y".equalsIgnoreCase(confirmation)) {
+							deleteEC2Instance(instanceId); // 인스턴스를 삭제하는 메서드 호출
+						} else {
+							System.out.println("인스턴스 삭제가 취소되었습니다.");
+						}
+						break;
+					case 9:
+						System.out.print("Enter Instance ID to fetch details: ");
+						instanceId = idScanner.nextLine();
+						describeInstance(instanceId);
+						break;
+					case 10:
+						System.out.print("Enter Instance ID to fetch memory details: ");
+						instanceId = idScanner.nextLine();
+						checkInstanceMemory(instanceId);
+						break;
+					case 11:
+						listAllVolumes();
+						break;
+					case 12:
+						listImages();
+						break;
+					case 13:
+						showNetworkSecurityMenu();
+						break;
+					case 14:
+						Condor_status();
+						break;
+					case 99:
+						System.out.println("Exiting... Goodbye!");
+						menu.close();
+						idScanner.close();
+						return;
+					default:
+						System.out.println("Invalid option! Please select a valid menu option.");
+				}
 			}
 		}
-	}
 
-	public static void listInstances() {
+
+		public static void listInstances() {
 
 		System.out.println("Listing instances....");
 		boolean done = false;
@@ -614,6 +629,24 @@
 				System.out.println("Error fetching network interfaces: " + e.getMessage());
 			} catch (AmazonClientException e) {
 				System.out.println("Error communicating with AWS: " + e.getMessage());
+			}
+		}
+
+		public static void deleteEC2Instance(String instanceId) {
+			AmazonEC2 ec2 = AmazonEC2Client.builder().build();
+
+			// 인스턴스 종료 요청
+			TerminateInstancesRequest terminateRequest = new TerminateInstancesRequest().withInstanceIds(instanceId);
+
+			try {
+				TerminateInstancesResult terminateResult = ec2.terminateInstances(terminateRequest);
+
+				// 종료된 인스턴스의 상태 출력
+				for (InstanceStateChange stateChange : terminateResult.getTerminatingInstances()) {
+					System.out.printf("Instance %s is now in state: %s\n", stateChange.getInstanceId(), stateChange.getCurrentState().getName());
+				}
+			} catch (AmazonServiceException e) {
+				System.out.println("Error terminating EC2 instance: " + e.getMessage());
 			}
 		}
 
