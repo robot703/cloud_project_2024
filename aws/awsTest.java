@@ -58,7 +58,7 @@
 			System.out.println("5. Stop Instance         6. Create Instance");
 			System.out.println("7. Reboot Instance       8. List Images");
 			System.out.println("9. Condor_status         10. Describe Instance");
-			System.out.println("11. CheckInstanceMemory");
+			System.out.println("11. Check Instance Memory  12. List Volumes");
 			System.out.println("99. Quit");
 			System.out.println("-----------------------------------------------");
 			System.out.print("Select an option: ");
@@ -117,6 +117,9 @@
 					System.out.print("Enter Instance ID to check memory: ");
 					instanceId = idScanner.nextLine();
 					checkInstanceMemory(instanceId);
+					break;
+				case 12:
+					listAllVolumes();
 					break;
 				case 99:
 					System.out.println("Exiting... Goodbye!");
@@ -467,6 +470,35 @@
 				e.printStackTrace();
 			}
 		}
+
+		//불륨리스트 조회
+		public static void listAllVolumes() {
+			try {
+				// EBS 볼륨 정보 가져오기
+				DescribeVolumesRequest request = new DescribeVolumesRequest();
+				DescribeVolumesResult result = ec2.describeVolumes(request);
+
+				// 각 볼륨의 정보를 출력
+				System.out.println("Listing all volumes:");
+				for (Volume volume : result.getVolumes()) {
+					System.out.println("Volume ID: " + volume.getVolumeId());
+					System.out.println("Availability Zone: " + volume.getAvailabilityZone());
+					System.out.println("Size (GiB): " + volume.getSize());
+					System.out.println("Volume Type: " + volume.getVolumeType());
+					System.out.println("State: " + volume.getState());
+					System.out.println("Create Time: " + volume.getCreateTime());
+					System.out.println("Attachment Status: " + (volume.getAttachments().isEmpty() ? "Not Attached" : "Attached"));
+					System.out.println("-----------------------------------------------");
+				}
+			} catch (AmazonServiceException e) {
+				System.err.println("Error occurred while retrieving volumes: " + e.getMessage());
+				e.printStackTrace();
+			} catch (AmazonClientException e) {
+				System.err.println("Error occurred while connecting to AWS: " + e.getMessage());
+				e.printStackTrace();
+			}
+		}
+
 
 
 	}
