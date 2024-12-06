@@ -7,6 +7,8 @@
 	import java.util.Scanner;
 	import com.amazonaws.AmazonClientException;
 	import com.amazonaws.AmazonServiceException;
+	import com.amazonaws.auth.AWSStaticCredentialsProvider;
+	import com.amazonaws.auth.BasicAWSCredentials;
 	import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 	import com.amazonaws.services.appstream.model.Session;
 	import com.amazonaws.services.ec2.AmazonEC2;
@@ -56,6 +58,7 @@
 			System.out.println("5. Stop Instance         6. Create Instance");
 			System.out.println("7. Reboot Instance       8. List Images");
 			System.out.println("9. Condor_status         10. Describe Instance");
+			System.out.println("11. CheckInstanceMemory");
 			System.out.println("99. Quit");
 			System.out.println("-----------------------------------------------");
 			System.out.print("Select an option: ");
@@ -109,6 +112,11 @@
 					System.out.print("Enter Instance ID to fetch details: ");
 					instanceId = idScanner.nextLine();
 					describeInstance(instanceId);
+					break;
+				case 11:
+					System.out.print("Enter Instance ID to check memory: ");
+					instanceId = idScanner.nextLine();
+					checkInstanceMemory(instanceId);
 					break;
 				case 99:
 					System.out.println("Exiting... Goodbye!");
@@ -296,12 +304,18 @@
 
 		public static void Condor_status() {
 			String user = "ec2-user"; // SSH 사용자 이름
-			String host = "ec2-13-211-94-14.ap-southeast-2.compute.amazonaws.com"; // EC2 퍼블릭 DNS
 			int port = 22; // SSH 포트 (기본값은 22)
 			String privateKeyPath = "C:/Users/robot/.ssh/cloud-test.pem";// 키 파일 경로
 
 			com.jcraft.jsch.JSch jsch = new com.jcraft.jsch.JSch(); // JSch 객체 생성
 			com.jcraft.jsch.Session session = null; // JSch의 Session 사용
+			String instanceId = "i-0f2dffc1e0feaf59e";
+
+			String host = getPublicDNS(instanceId);
+			if (host == null) {
+				System.err.println("Failed to retrieve Public DNS Name for instance: " + instanceId);
+				return;
+			}
 
 			try {
 				// 개인 키를 추가합니다.
@@ -342,49 +356,68 @@
 			}
 		}
 
-		//인스턴스 상세정보 확인 함수
-		public static void describeInstance(String instanceId) {
+		private static String getPublicDNS(String instanceId) {
 			try {
-				System.out.printf("Fetching details for instance: %s\n", instanceId);
-
+				// Create request to describe the instance
 				DescribeInstancesRequest request = new DescribeInstancesRequest()
 						.withInstanceIds(instanceId);
+
+				// Execute the request
 				DescribeInstancesResult response = ec2.describeInstances(request);
 
 				for (Reservation reservation : response.getReservations()) {
 					for (Instance instance : reservation.getInstances()) {
-						String publicIp = instance.getPublicIpAddress();
-						if (publicIp == null) {
-							publicIp = "No Public IP";
-						}
+						return instance.getPublicDnsName(); // Public DNS Name 반환
+					}
+				}
+			} catch (Exception e) {
+				System.err.println("Error fetching Public DNS Name: " + e.getMessage());
+				e.printStackTrace();
+			}
+			return null; // 오류 시 null 반환
+		}
 
-						System.out.printf(
-								"[Instance ID] %s\n" +
-										"[AMI ID] %s\n" +
-										"[Instance Type] %s\n" +
-										"[State] %s\n" +
-										"[Private IP] %s\n" +
-										"[Public IP] %s\n" +
-										"[Launch Time] %s\n",
-								instance.getInstanceId(),
-								instance.getImageId(),
-								instance.getInstanceType(),
-								instance.getState().getName(),
-								instance.getPrivateIpAddress(),
-								publicIp,
-								instance.getLaunchTime());
+		//인스턴스 상세정보 확인 함수
+		public static void describeInstance(String instanceId) {
+			try {
+				// Create request to describe the instance
+				DescribeInstancesRequest request = new DescribeInstancesRequest()
+						.withInstanceIds(instanceId);
+
+				// Execute the request
+				DescribeInstancesResult response = ec2.describeInstances(request);
+
+				// Process and display the results
+				for (Reservation reservation : response.getReservations()) {
+					for (Instance instance : reservation.getInstances()) {
+						System.out.println("==== Instance Detailed Information ====");
+						System.out.println("Instance ID: " + instance.getInstanceId());
+						System.out.println("Public IPv4 Address: " + instance.getPublicIpAddress());
+						System.out.println("Private IPv4 Address: " + instance.getPrivateIpAddress());
+						System.out.println("Public DNS Name: " + instance.getPublicDnsName());
+						System.out.println("Private DNS Name: " + instance.getPrivateDnsName());
+						System.out.println("Instance State: " + instance.getState().getName());
+						System.out.println("Instance Type: " + instance.getInstanceType());
+						System.out.println("Elastic GPU Associations: " +
+								(instance.getElasticGpuAssociations().isEmpty() ? "None" : instance.getElasticGpuAssociations()));
+						System.out.println("VPC ID: " + instance.getVpcId());
+						System.out.println("Subnet ID: " + instance.getSubnetId());
+						System.out.println("IAM Role: " +
+								(instance.getIamInstanceProfile() != null ? instance.getIamInstanceProfile().getArn() : "None"));
+						System.out.println("Launch Time: " + instance.getLaunchTime());
+						System.out.println("Security Groups: " +
+								instance.getSecurityGroups().stream()
+										.map(GroupIdentifier::getGroupName)
+										.toList());
+						System.out.println("===============================");
 					}
 				}
 			} catch (AmazonServiceException e) {
-				System.err.println("Amazon service error: " + e.getMessage());
+				System.err.println("Amazon service error: " + e.getErrorMessage());
 			} catch (AmazonClientException e) {
 				System.err.println("Amazon client error: " + e.getMessage());
-			} catch (Exception e) {
-				System.err.println("Unexpected error: " + e.getMessage());
 			}
 		}
-
-
 
 	}
 
