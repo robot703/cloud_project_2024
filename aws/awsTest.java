@@ -17,6 +17,10 @@
 	import com.jcraft.jsch.ChannelExec;
 	import com.jcraft.jsch.JSch;
 
+	import com.amazonaws.services.ec2.model.KeyPair;
+	import com.amazonaws.services.ec2.model.DescribeKeyPairsRequest;
+	import com.amazonaws.services.ec2.model.DescribeKeyPairsResult;
+
 	public class awsTest {
 
 		static AmazonEC2 ec2;
@@ -59,7 +63,8 @@
 			System.out.println("7. Reboot Instance       8. List Images");
 			System.out.println("9. Condor_status         10. Describe Instance");
 			System.out.println("11. Check Instance Memory  12. List Volumes");
-			System.out.println("99. Quit");
+			System.out.println("13. Network Security Menu 99. Quit");
+			System.out.println("13. Network Security Menu 99. Quit");
 			System.out.println("-----------------------------------------------");
 			System.out.print("Select an option: ");
 
@@ -120,6 +125,10 @@
 					break;
 				case 12:
 					listAllVolumes();
+					break;
+
+				case 13:
+					showNetworkSecurityMenu();
 					break;
 				case 99:
 					System.out.println("Exiting... Goodbye!");
@@ -499,6 +508,114 @@
 			}
 		}
 
+		public static void showNetworkSecurityMenu() {
+			Scanner scanner = new Scanner(System.in);  // Local scanner inside the method
+			while (true) {
+				System.out.println("\n 1. Security Groups");
+				System.out.println(" 2. Key Pairs");
+				System.out.println(" 3. Network Interfaces");
+				System.out.println(" 4. Back to menu");
+				System.out.print(" Choose Menu : ");
+				int choice = scanner.nextInt();
+
+				switch (choice) {
+					case 1:
+						showSecurityGroups();
+						break;
+					case 2:
+						showKeyPairs();
+						break;
+					case 3:
+						showNetworkInterfaces();
+						break;
+					case 4:
+						return; // 원래 메뉴로 돌아가기
+					default:
+						System.out.println("잘못된 선택입니다.");
+						break;
+				}
+			}
+		}
+
+		public static void showSecurityGroups() {
+			try {
+				// Create a DescribeSecurityGroupsRequest
+				DescribeSecurityGroupsRequest request = new DescribeSecurityGroupsRequest();
+
+				// Call the AWS EC2 service to get the list of security groups
+				DescribeSecurityGroupsResult response = ec2.describeSecurityGroups(request);
+
+				System.out.println("Name | Security Group ID | Group Name | VPC ID | Description | Owner | Inbound Rules Count | Outbound Rules Count");
+				System.out.println("-----------------------------------------------------------------------------------------------------------");
+
+				for (SecurityGroup group : response.getSecurityGroups()) {
+					// Print details of each security group
+					System.out.println(group.getGroupName() + " | " + group.getGroupId() + " | " + group.getGroupName() + " | "
+							+ group.getVpcId() + " | " + group.getDescription() + " | " + group.getOwnerId() + " | "
+							+ group.getIpPermissions().size() + " | " + group.getIpPermissionsEgress().size());
+				}
+			} catch (AmazonServiceException e) {
+				System.out.println("Error fetching security groups: " + e.getMessage());
+			} catch (AmazonClientException e) {
+				System.out.println("Error communicating with AWS: " + e.getMessage());
+			}
+		}
+
+
+		public static void showKeyPairs() {
+			try {
+				// Describe key pairs from EC2
+				DescribeKeyPairsRequest request = new DescribeKeyPairsRequest();
+				DescribeKeyPairsResult result = ec2.describeKeyPairs(request);
+
+				// Iterate through the key pairs and print the relevant details
+				System.out.println("Key Pair List:");
+				System.out.println("-------------------------------------------------");
+				System.out.println("Name | Fingerprint | Key Pair ID");
+				System.out.println("-------------------------------------------------");
+
+				for (KeyPairInfo keyPair : result.getKeyPairs()) {
+					// Printing key pair details
+					System.out.printf("%s | %s | %s%n", keyPair.getKeyName(), keyPair.getKeyFingerprint(), keyPair.getKeyName());
+				}
+			} catch (AmazonServiceException e) {
+				System.out.println("Error occurred while fetching key pairs: " + e.getMessage());
+			}
+		}
+
+
+		public static void showNetworkInterfaces() {
+			try {
+				// Create a DescribeNetworkInterfacesRequest
+				DescribeNetworkInterfacesRequest request = new DescribeNetworkInterfacesRequest();
+
+				// Call the AWS EC2 service to get the list of network interfaces
+				DescribeNetworkInterfacesResult response = ec2.describeNetworkInterfaces(request);
+
+				System.out.println("Name | Network Interface ID | Subnet ID | VPC ID | Availability Zone | Security Group Name | Security Group ID | Interface Type | Description | Instance ID | Status | Public IPv4 Address | Primary Private IPv4 Address");
+				System.out.println("-------------------------------------------------------------------------------------------------------------------------------");
+
+				for (NetworkInterface networkInterface : response.getNetworkInterfaces()) {
+					// Get the association and check if it's null
+					String publicIp = "N/A"; // Default value if no public IP exists
+					if (networkInterface.getAssociation() != null && networkInterface.getAssociation().getPublicIp() != null) {
+						publicIp = networkInterface.getAssociation().getPublicIp(); // Fetch the public IP if available
+					}
+
+					// Print details of each network interface, including public IP if available
+					System.out.println(networkInterface.getNetworkInterfaceId() + " | "
+							+ networkInterface.getNetworkInterfaceId() + " | " + networkInterface.getSubnetId() + " | "
+							+ networkInterface.getVpcId() + " | " + networkInterface.getAvailabilityZone() + " | "
+							+ networkInterface.getGroups() + " | " + networkInterface.getStatus() + " | "
+							+ publicIp + " | "
+							+ networkInterface.getPrivateIpAddresses().get(0).getPrivateIpAddress());
+				}
+			} catch (AmazonServiceException e) {
+				System.out.println("Error fetching network interfaces: " + e.getMessage());
+			} catch (AmazonClientException e) {
+				System.out.println("Error communicating with AWS: " + e.getMessage());
+			}
+		}
 
 
 	}
