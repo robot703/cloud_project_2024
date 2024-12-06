@@ -55,7 +55,7 @@
 			System.out.println("3. Start Instance        4. Show Regions");
 			System.out.println("5. Stop Instance         6. Create Instance");
 			System.out.println("7. Reboot Instance       8. List Images");
-			System.out.println("9. Condor_status");
+			System.out.println("9. Condor_status         10. Describe Instance");
 			System.out.println("99. Quit");
 			System.out.println("-----------------------------------------------");
 			System.out.print("Select an option: ");
@@ -104,6 +104,11 @@
 					break;
 				case 9:
 					Condor_status();
+					break;
+				case 10:
+					System.out.print("Enter Instance ID to fetch details: ");
+					instanceId = idScanner.nextLine();
+					describeInstance(instanceId);
 					break;
 				case 99:
 					System.out.println("Exiting... Goodbye!");
@@ -337,8 +342,51 @@
 			}
 		}
 
+		//인스턴스 상세정보 확인 함수
+		public static void describeInstance(String instanceId) {
+			try {
+				System.out.printf("Fetching details for instance: %s\n", instanceId);
+
+				DescribeInstancesRequest request = new DescribeInstancesRequest()
+						.withInstanceIds(instanceId);
+				DescribeInstancesResult response = ec2.describeInstances(request);
+
+				for (Reservation reservation : response.getReservations()) {
+					for (Instance instance : reservation.getInstances()) {
+						String publicIp = instance.getPublicIpAddress();
+						if (publicIp == null) {
+							publicIp = "No Public IP";
+						}
+
+						System.out.printf(
+								"[Instance ID] %s\n" +
+										"[AMI ID] %s\n" +
+										"[Instance Type] %s\n" +
+										"[State] %s\n" +
+										"[Private IP] %s\n" +
+										"[Public IP] %s\n" +
+										"[Launch Time] %s\n",
+								instance.getInstanceId(),
+								instance.getImageId(),
+								instance.getInstanceType(),
+								instance.getState().getName(),
+								instance.getPrivateIpAddress(),
+								publicIp,
+								instance.getLaunchTime());
+					}
+				}
+			} catch (AmazonServiceException e) {
+				System.err.println("Amazon service error: " + e.getMessage());
+			} catch (AmazonClientException e) {
+				System.err.println("Amazon client error: " + e.getMessage());
+			} catch (Exception e) {
+				System.err.println("Unexpected error: " + e.getMessage());
+			}
+		}
+
 
 
 	}
+
 
 
