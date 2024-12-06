@@ -419,6 +419,56 @@
 			}
 		}
 
+		//인스턴스 메모리 확인
+		public static void checkInstanceMemory(String instanceId) {
+			String user = "ec2-user"; // SSH 사용자 이름
+			String host = getPublicDNS(instanceId); // EC2 퍼블릭 DNS
+			int port = 22; // SSH 포트 (기본값은 22)
+			String privateKeyPath = "C:/Users/robot/.ssh/cloud-test.pem"; // 키 파일 경로
+
+			com.jcraft.jsch.JSch jsch = new com.jcraft.jsch.JSch(); // JSch 객체 생성
+			com.jcraft.jsch.Session session = null; // JSch의 Session 사용
+
+			try {
+				// 개인 키를 추가합니다.
+				jsch.addIdentity(privateKeyPath);
+
+				// 세션 설정
+				session = jsch.getSession(user, host, port);
+
+				// 호스트 키 검증 비활성화 (생략 가능)
+				session.setConfig("StrictHostKeyChecking", "no");
+
+				// SSH 연결 시작
+				System.out.println("Establishing SSH Connection...");
+				session.connect();
+
+				// 메모리 상태 확인을 위한 명령어 실행 (예: free -h)
+				com.jcraft.jsch.ChannelExec channelExec = (com.jcraft.jsch.ChannelExec) session.openChannel("exec");
+				channelExec.setCommand("free -h"); // EC2 인스턴스의 메모리 사용 상태 확인
+				channelExec.setErrStream(System.err);
+
+				InputStream in = channelExec.getInputStream();
+				channelExec.connect();
+
+				// 명령어 결과 읽기
+				BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+				String line;
+				System.out.println("Memory Status Output:");
+				while ((line = reader.readLine()) != null) {
+					System.out.println(line);
+				}
+
+				// 채널과 세션 닫기
+				channelExec.disconnect();
+				session.disconnect();
+			} catch (Exception e) {
+				System.err.println("Error while connecting to the server: " + e.getMessage());
+				e.printStackTrace();
+			}
+		}
+
+
 	}
 
 
